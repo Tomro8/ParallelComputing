@@ -39,7 +39,6 @@ __kernel void graphicsEngine(__constant satelite *satelites, __global color *pix
 
 	int idx = get_global_id(0);
 	int idy = get_global_id(1);
-	
 	//printf("idx. %d\n", idx);
 
 	//  #pragma omp parallel for
@@ -48,7 +47,7 @@ __kernel void graphicsEngine(__constant satelite *satelites, __global color *pix
 	//for(int i = 0; i < SIZE; ++i) {
 
 		// Row wise ordering
-		floatvector pixel = {.x = idx, .y = idy};
+		floatvector pixel = {.x = idx % WINDOW_WIDTH, .y = idy / WINDOW_WIDTH};
 
 		// This color is used for coloring the pixel
 		color renderColor = {.red = 0.f, .green = 0.f, .blue = 0.f};
@@ -82,6 +81,7 @@ __kernel void graphicsEngine(__constant satelite *satelites, __global color *pix
 			}
 		}
 
+		//printf("before if\n");
 		// Second graphics loop: Calculate the color based on distance to every satelite.
 		if (!hitsSatellite) {
 			// #pragma omp parallel for

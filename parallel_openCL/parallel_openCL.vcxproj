@@ -18,6 +18,12 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="graphicsEngine.cl" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{FD92E3B7-E62F-49ED-AE3F-4E20EA53A363}</ProjectGuid>
@@ -104,7 +110,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.1\lib\Win32";"C:\Program Files %28x86%29\Microsoft Visual Studio\2019\Professional\SDK\ScopeCppSDK\SDK\lib;C:\Work\glutdlls;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.1\include";"C:\Program Files %28x86%29\Microsoft Visual Studio\2019\Professional\SDK\ScopeCppSDK\SDK\lib;C:\Work\glutdlls;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,9 +136,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\parallel_openMP\main.c" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

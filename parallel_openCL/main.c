@@ -108,96 +108,7 @@ satelite* backupSatelites;
 
 // ## You may add your own variables here ##
 
-const char* programSource = 
 
-"typedef struct {\n"
-"	float x;\n"
-"	float y;\n"
-"} floatvector;\n"
-"\n"
-"typedef struct {\n"
-"	float red;\n"
-"	float green;\n"
-"	float blue;\n"
-"} color;\n"
-"\n"
-"typedef struct {\n"
-"	color identifier;\n"
-"	floatvector position;\n"
-"	floatvector velocity;\n"
-"} satelite;\n"
-"\n"
-
-"__kernel\n"
-"void graphicsEngine()\n"
-"{\n"
-"#pragma omp parallel for\n"
-" // #pragma omp master\n"
-" // Graphics pixel loop\n"
-"	for (int i = 0; i < SIZE; ++i) {\n"
-"\n"
-"		// Row wise ordering\n"
-"		floatvector pixel = { .x = i % WINDOW_WIDTH,.y = i / WINDOW_WIDTH };\n"
-"\n"
-"		// This color is used for coloring the pixel\n"
-"		color renderColor = { .red = 0.f,.green = 0.f,.blue = 0.f };\n"
-"\n"
-"		// Find closest satelite\n"
-"		float shortestDistance = INFINITY;\n"
-"\n"
-"		float weights = 0.f;\n"
-"		int hitsSatellite = 0;\n"
-"\n"
-"		// First Graphics satelite loop: Find the closest satellite.\n"
-"		for (int j = 0; j < SATELITE_COUNT; ++j) {\n"
-"			floatvector difference = { .x = pixel.x - satelites[j].position.x,\n"
-"									  .y = pixel.y - satelites[j].position.y };\n"
-"			float distance = sqrt(difference.x * difference.x +\n"
-"				difference.y * difference.y);\n"
-"\n"
-"			if (distance < SATELITE_RADIUS) {\n"
-"				renderColor.red = 1.0f;\n"
-"				renderColor.green = 1.0f;\n"
-"				renderColor.blue = 1.0f;\n"
-"				hitsSatellite = 1;\n"
-"				break;\n"
-"			}\n"
-"			else {\n"
-"				float weight = 1.0f / (distance * distance * distance * distance);\n"
-"				weights += weight;\n"
-"				if (distance < shortestDistance) {\n"
-"					shortestDistance = distance;\n"
-"					renderColor = satelites[j].identifier;\n"
-"				}\n"
-"			}\n"
-"		}\n"
-"\n"
-"\n"
-"		// Second graphics loop: Calculate the color based on distance to every satelite.\n"
-"		if (!hitsSatellite) {\n"
-"			// #pragma omp parallel for\n"
-"			for (int j = 0; j < SATELITE_COUNT; ++j) {\n"
-"\n"
-"				floatvector difference = { .x = pixel.x - satelites[j].position.x,\n"
-"										  .y = pixel.y - satelites[j].position.y };\n"
-"				float dist2 = (difference.x * difference.x +\n"
-"					difference.y * difference.y);\n"
-"				float weight = 1.0f / (dist2 * dist2);\n"
-"\n"
-"				renderColor.red += (satelites[j].identifier.red *\n"
-"					weight / weights) * 3.0f;\n"
-"\n"
-"				renderColor.green += (satelites[j].identifier.green *\n"
-"					weight / weights) * 3.0f;\n"
-"\n"
-"				renderColor.blue += (satelites[j].identifier.blue *\n"
-"					weight / weights) * 3.0f;\n"
-"			}\n"
-"		}\n"
-"		pixels[i] = renderColor;\n"
-"	}\n"
-"}\n"
-;
 
 #define MAX_SOURCE_SIZE (0x100000)
 
@@ -251,7 +162,7 @@ void init(){
 
 	// Retrieve the number of devices
 	cl_uint numDevices = 0;
-	status = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, 0,
+	status = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 0,
 		NULL, &numDevices);
 	if (status != CL_SUCCESS)
 	{
@@ -271,7 +182,7 @@ void init(){
 	printf("Space for devices allocated\n");
 
 	// Fill in the devices 
-	status = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL,
+	status = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU,
 		numDevices, devices, NULL);
 	if (status != CL_SUCCESS)
 	{
@@ -302,8 +213,9 @@ void init(){
 
 	// Create a buffer object that will contain the data 
     // For satelite data
-	satelite_data_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, SATELITE_COUNT,
+	satelite_data_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, SATELITE_COUNT * sizeof(satelite),
 		NULL, &status);
+	
 	if (status != CL_SUCCESS)
 	{
 		printf("Error while creating satelite buffer input\n");
@@ -312,7 +224,7 @@ void init(){
 	printf("Satelite input buffer created\n");
 
 	// For pixel data
-	pixel_data_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE,
+	pixel_data_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE * sizeof(color),
 		NULL, &status);
 	if (status != CL_SUCCESS)
 	{
@@ -322,7 +234,7 @@ void init(){
 	printf("Pixel output buffer created\n");
 
 	// For pixel data
-	pixel_data_buffer_out = clCreateBuffer(context, CL_MEM_WRITE_ONLY, SIZE,
+	pixel_data_buffer_out = clCreateBuffer(context, CL_MEM_WRITE_ONLY, SIZE * sizeof(color),
 		NULL, &status);
 	if (status != CL_SUCCESS)
 	{
@@ -467,7 +379,7 @@ void parallelGraphicsEngine() {
 
 	// Filling satelite input buffer with satelite data
 	status = clEnqueueWriteBuffer(cmdQueue, satelite_data_buffer, CL_FALSE,
-		0, SATELITE_COUNT, satelites, 0, NULL, NULL);
+		0, SATELITE_COUNT * sizeof(satelite), satelites, 0, NULL, NULL);
 	if (status != CL_SUCCESS)
 	{
 		printf("Error while feeding data into satelite buffer to the kernel\n");
@@ -478,7 +390,7 @@ void parallelGraphicsEngine() {
 	printf("Init. Pixels[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
 	// Filling pixel buffer with pixel data
 	status = clEnqueueWriteBuffer(cmdQueue, pixel_data_buffer, CL_FALSE,
-		0, SIZE, pixels, 0, NULL, NULL);
+		0, SIZE * sizeof(color), pixels, 0, NULL, NULL);
 	if (status != CL_SUCCESS)
 	{
 		printf("Error while feeding data into pixel buffer to the kernel\n");
@@ -519,13 +431,14 @@ void parallelGraphicsEngine() {
 	// items for execution. A workgroup size (local work size) 
 	// is not required, but can be used.
 	size_t globalWorkSize[] = { WINDOW_WIDTH, WINDOW_HEIGHT };
-	size_t localWorkSize[] = { 2, 2 };
+	size_t localWorkSize[] = { 8, 8 };
 	
 	printf("Before. Pixels[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
 
 	// Executing kernel
-	status = clEnqueueNDRangeKernel(cmdQueue, kernel, 2, NULL,
-		globalWorkSize, NULL, 0, NULL, NULL);
+	status = clEnqueueNDRangeKernel(cmdQueue, kernel, 2, 0,
+		globalWorkSize, localWorkSize, 0, NULL, NULL);
+
 	if (status != CL_SUCCESS)
 	{
 		printf("Error while executing kernel\n");
@@ -533,15 +446,25 @@ void parallelGraphicsEngine() {
 	}
 	printf("Kernel executed\n");
 
+	status = clFinish(cmdQueue);
+
+	if (status != CL_SUCCESS)
+	{
+		printf("Error clFinish is called\n");
+		return;
+	}
+
 	// Read device output buffer to the host pixel array
 	clEnqueueReadBuffer(cmdQueue, pixel_data_buffer_out, CL_TRUE, 0,
-		SIZE, pixels, 0, NULL, NULL);
+		SIZE * sizeof(color), pixels, 0, NULL, NULL);
 
+	/*
 	for (int i = 0; i < SIZE; i++) {
 		if (pixels[i].red != 0.0f)
 		printf("After. Pixels is: r%f g%f b%f\n", pixels[i].red, pixels[i].green, pixels[i].blue);
 	}
 	getchar();
+	*/
 }
 
 // ## You may add your own destrcution routines here ##
