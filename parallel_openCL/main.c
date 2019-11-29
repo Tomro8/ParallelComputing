@@ -108,8 +108,8 @@ satelite* backupSatelites;
 
 // ## You may add your own variables here ##
 
-#define WG_SIZE_X = 8;
-#define WG_SIZE_Y = 8;
+#define WG_SIZE_X 16
+#define WG_SIZE_Y 16
 
 #define MAX_SOURCE_SIZE (0x100000)
 
@@ -411,7 +411,7 @@ void parallelGraphicsEngine() {
 	// items for execution. A workgroup size (local work size) 
 	// is not required, but can be used.
 	size_t globalWorkSize[] = { WINDOW_WIDTH, WINDOW_HEIGHT };
-	size_t localWorkSize[] = { 8, 8 };
+	size_t localWorkSize[] = { WG_SIZE_X, WG_SIZE_Y };
 
 	// Executing kernel
 	status = clEnqueueNDRangeKernel(cmdQueue, kernel, 2, 0,
