@@ -190,7 +190,7 @@ void parallelPhysicsEngine(){
 // Decides the color for each pixel.
 void parallelGraphicsEngine(){
 
-   #pragma omp parallel for
+	#pragma omp parallel for
    // #pragma omp master
     // Graphics pixel loop
     for(int i = 0 ;i < SIZE; ++i) {
@@ -254,6 +254,7 @@ void parallelGraphicsEngine(){
       }
       pixels[i] = renderColor;
    }
+
 }
 
 // ## You may add your own destrcution routines here ##
@@ -398,12 +399,20 @@ void sequentialPhysicsEngine(satelite *s){
 // ¤¤ DO NOT EDIT THIS FUNCTION ¤¤
 void errorCheck(){
    for(int i=0; i < SIZE; ++i) {
+	   if (i < 2) {
+		   printf("MyPixel/CorrectPixel are\n r:%f/%f g:%f/%f b:%f/%f \n",
+			   pixels[i].red, correctPixels[i].red,
+			   pixels[i].green, correctPixels[i].green,
+			   pixels[i].blue, correctPixels[i].blue);
+	   }
+	   
       if(correctPixels[i].red != pixels[i].red ||
          correctPixels[i].green != pixels[i].green ||
          correctPixels[i].blue != pixels[i].blue){ 
 
          printf("Buggy pixel at (x=%i, y=%i). Press enter to continue.\n", i % WINDOW_WIDTH, i / WINDOW_WIDTH);
-         getchar();
+		 
+		 getchar();
          return;
        }
    }

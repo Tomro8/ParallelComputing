@@ -24,28 +24,14 @@ typedef struct{
 #define SIZE WINDOW_HEIGHT * WINDOW_HEIGHT
 
 
-// __kernel void graphicsEngine(__constant satelite *satelites, __global color *pixels) {
-// 	printf("In1. Pixels[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
-// 	 pixels[0].red = 1.0f;
-// 	pixels[0].blue = 2.0f;
-// 	printf("InLast. Pixels[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
-//  }
-
-__kernel void graphicsEngine(__constant satelite *satelites, __global color *pixels, __global color* pixelsOut) {
+__kernel void graphicsEngine(__constant satelite *satelites, __global color *pixels) {
 	
-	//printf("In1. Pixels[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
-	//printf("In1. Satelite[0] is: x%f y%f\n", satelites[0].position.x, satelites[0].position.y);
-	//pixels[0].red = SATELITE_RADIUS;
-
 	int idx = get_global_id(0);
 	int idy = get_global_id(1);
-	
-	//printf("idx. %d\n", idx);
 
 	//  #pragma omp parallel for
 	// #pragma omp master
 	//Graphics pixel loop
-	//for(int i = 0; i < SIZE; ++i) {
 
 		// Row wise ordering
 		floatvector pixel = {.x = idx, .y = idy};
@@ -103,12 +89,6 @@ __kernel void graphicsEngine(__constant satelite *satelites, __global color *pix
 										weight / weights) * 3.0f;
 			}
 		}
-		//printf("before pixels out PixelsOut is: r%f g%f b%f\n", pixelsOut[idx + WINDOW_WIDTH * idy].red, pixelsOut[idx + WINDOW_WIDTH * idy].green, pixelsOut[idx + WINDOW_WIDTH * idy].blue);
-		
-		pixelsOut[idx + WINDOW_WIDTH * idy] = renderColor;
-		
-		//printf("after pixels out PixelsOut is: r%f g%f b%f\n", pixelsOut[idx + WINDOW_WIDTH * idy].red, pixelsOut[idx + WINDOW_WIDTH * idy].green, pixelsOut[idx + WINDOW_WIDTH * idy].blue);
-	//}
 
-	//printf("InLast. PixelsOut[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
+		pixels[idx + WINDOW_WIDTH * idy] = renderColor;
 }

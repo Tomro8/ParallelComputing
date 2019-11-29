@@ -109,7 +109,6 @@ satelite* backupSatelites;
 // ## You may add your own variables here ##
 
 
-
 #define MAX_SOURCE_SIZE (0x100000)
 
 // Use this to check the output of each API call
@@ -122,7 +121,6 @@ cl_kernel kernel;
 cl_mem satelite_data_buffer;
 // Hold pixel data from the kernel
 cl_mem pixel_data_buffer;
-cl_mem pixel_data_buffer_out;
 // Command queue to assiciate with the device
 cl_command_queue cmdQueue;
 // Program object
@@ -224,17 +222,7 @@ void init(){
 	printf("Satelite input buffer created\n");
 
 	// For pixel data
-	pixel_data_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE * sizeof(color),
-		NULL, &status);
-	if (status != CL_SUCCESS)
-	{
-		printf("Error while creating pixel buffer output\n");
-		return;
-	}
-	printf("Pixel output buffer created\n");
-
-	// For pixel data
-	pixel_data_buffer_out = clCreateBuffer(context, CL_MEM_WRITE_ONLY, SIZE * sizeof(color),
+	pixel_data_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, SIZE * sizeof(color),
 		NULL, &status);
 	if (status != CL_SUCCESS)
 	{
@@ -387,7 +375,6 @@ void parallelGraphicsEngine() {
 	}
 	printf("Satelite buffer initalized with data\n");
 
-	printf("Init. Pixels[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
 	// Filling pixel buffer with pixel data
 	status = clEnqueueWriteBuffer(cmdQueue, pixel_data_buffer, CL_FALSE,
 		0, SIZE * sizeof(color), pixels, 0, NULL, NULL);
@@ -417,28 +404,16 @@ void parallelGraphicsEngine() {
 	}
 	printf("Pixel buffer associated with kernel\n");
 
-	// Associating pixel buffer output to kernel
-	status = clSetKernelArg(kernel, 2, sizeof(cl_mem), &pixel_data_buffer_out);
-	if (status != CL_SUCCESS)
-	{
-		printf("Error while associating pixel data buffer to the kernel\n");
-		return;
-	}
-	printf("Pixel buffer associated with kernel\n");
-
 
 	// Define an index space (global work size) of work 
 	// items for execution. A workgroup size (local work size) 
 	// is not required, but can be used.
 	size_t globalWorkSize[] = { WINDOW_WIDTH, WINDOW_HEIGHT };
 	size_t localWorkSize[] = { 8, 8 };
-	
-	printf("Before. Pixels[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
 
 	// Executing kernel
 	status = clEnqueueNDRangeKernel(cmdQueue, kernel, 2, 0,
 		globalWorkSize, localWorkSize, 0, NULL, NULL);
-
 	if (status != CL_SUCCESS)
 	{
 		printf("Error while executing kernel\n");
@@ -446,8 +421,8 @@ void parallelGraphicsEngine() {
 	}
 	printf("Kernel executed\n");
 
+	// Make sure command queue has issued all commands
 	status = clFinish(cmdQueue);
-
 	if (status != CL_SUCCESS)
 	{
 		printf("Error clFinish is called\n");
@@ -455,16 +430,8 @@ void parallelGraphicsEngine() {
 	}
 
 	// Read device output buffer to the host pixel array
-	clEnqueueReadBuffer(cmdQueue, pixel_data_buffer_out, CL_TRUE, 0,
+	clEnqueueReadBuffer(cmdQueue, pixel_data_buffer, CL_TRUE, 0,
 		SIZE * sizeof(color), pixels, 0, NULL, NULL);
-
-	/*
-	for (int i = 0; i < SIZE; i++) {
-		if (pixels[i].red != 0.0f)
-		printf("After. Pixels is: r%f g%f b%f\n", pixels[i].red, pixels[i].green, pixels[i].blue);
-	}
-	getchar();
-	*/
 }
 
 // ## You may add your own destrcution routines here ##
@@ -623,7 +590,7 @@ void errorCheck(){
 			 pixels[i].red, correctPixels[i].red,
 			 pixels[i].green, correctPixels[i].green,
 			 pixels[i].blue, correctPixels[i].blue);
-         getchar();
+         //getchar();
          return;
        }
    }
