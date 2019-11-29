@@ -203,14 +203,19 @@ const char* programSource =
 
 // Use this to check the output of each API call
 cl_int status;
+// Context object
+cl_context context;
 // Kernel object
 cl_kernel kernel;
 // Hold satelite data for the kernel
 cl_mem satelite_data_buffer;
 // Hold pixel data from the kernel
 cl_mem pixel_data_buffer;
+cl_mem pixel_data_buffer_out;
 // Command queue to assiciate with the device
 cl_command_queue cmdQueue;
+// Program object
+cl_program program;
 
 // ## You may add your own initialization routines here ##
 void init(){
@@ -276,7 +281,6 @@ void init(){
 	printf("Devices filled\n");
 
 	// Create a context and associate it with the devices
-	cl_context context;
 	context = clCreateContext(NULL, numDevices, devices, NULL,
 		NULL, &status);
 	if (status != CL_SUCCESS)
@@ -308,7 +312,7 @@ void init(){
 	printf("Satelite input buffer created\n");
 
 	// For pixel data
-	pixel_data_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, SIZE,
+	pixel_data_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE,
 		NULL, &status);
 	if (status != CL_SUCCESS)
 	{
@@ -317,12 +321,15 @@ void init(){
 	}
 	printf("Pixel output buffer created\n");
 
-	/*
-		Possibly Missing:
-			1. Creating buffers to hold input and output data
-			2. Filling input buffers with input data
-	*/
-
+	// For pixel data
+	pixel_data_buffer_out = clCreateBuffer(context, CL_MEM_WRITE_ONLY, SIZE,
+		NULL, &status);
+	if (status != CL_SUCCESS)
+	{
+		printf("Error while creating pixel buffer output\n");
+		return;
+	}
+	printf("Pixel output buffer created\n");
 
 	// Load the kernel source code into the array source_str
 	// Small piece of code comming from https://github.com/pratikone/OpenCL-learning-VS2012/blob/master/main.cpp
@@ -341,7 +348,7 @@ void init(){
 	printf("Kernel source loading done\n");
 
 	// Create a program with source code
-	cl_program program = clCreateProgramWithSource(context, 1,
+	program = clCreateProgramWithSource(context, 1,
 		(const char**)& source_str, NULL, &status);
 	if (status != CL_SUCCESS)
 	{
@@ -378,16 +385,6 @@ void init(){
 		return;
 	}
 	printf("Kernel created\n");
-
-
-	/*
-		Possibly Missing:
-			Associating buffers with kernel (Parameters)
-	*/
-
-	// Work group size and stuff
-	// Execute kernel
-	// Verify output
 
 }
 
@@ -466,7 +463,7 @@ void parallelPhysicsEngine(){
 // ## You are asked to make this code parallel ##
 // Rendering loop (This is called once a frame after physics engine) 
 // Decides the color for each pixel.
-void parallelGraphicsEngine(){
+void parallelGraphicsEngine() {
 
 	// Filling satelite input buffer with satelite data
 	status = clEnqueueWriteBuffer(cmdQueue, satelite_data_buffer, CL_FALSE,
@@ -476,9 +473,21 @@ void parallelGraphicsEngine(){
 		printf("Error while feeding data into satelite buffer to the kernel\n");
 		return;
 	}
-	printf("Satelite buffer initalized with data");
+	printf("Satelite buffer initalized with data\n");
 
-	// Sending data to kernel (Assiciate buffer to kernel)
+	printf("Init. Pixels[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
+	// Filling pixel buffer with pixel data
+	status = clEnqueueWriteBuffer(cmdQueue, pixel_data_buffer, CL_FALSE,
+		0, SIZE, pixels, 0, NULL, NULL);
+	if (status != CL_SUCCESS)
+	{
+		printf("Error while feeding data into pixel buffer to the kernel\n");
+		return;
+	}
+	printf("Pixel buffer initalized with data\n");
+
+
+	// Associating satelite buffer to kernel (Associate buffer to kernel)
 	status = clSetKernelArg(kernel, 0, sizeof(cl_mem), &satelite_data_buffer);
 	if (status != CL_SUCCESS)
 	{
@@ -488,7 +497,7 @@ void parallelGraphicsEngine(){
 	printf("Satelite buffer associated with kernel\n");
 
 	// Associating pixel buffer output to kernel
-	status = clSetKernelArg(kernel, 0, sizeof(cl_mem), &pixel_data_buffer);
+	status = clSetKernelArg(kernel, 1, sizeof(cl_mem), &pixel_data_buffer);
 	if (status != CL_SUCCESS)
 	{
 		printf("Error while associating pixel data buffer to the kernel\n");
@@ -496,15 +505,54 @@ void parallelGraphicsEngine(){
 	}
 	printf("Pixel buffer associated with kernel\n");
 
-	// Executing kernel
-	// Receive pixel output data
+	// Associating pixel buffer output to kernel
+	status = clSetKernelArg(kernel, 2, sizeof(cl_mem), &pixel_data_buffer_out);
+	if (status != CL_SUCCESS)
+	{
+		printf("Error while associating pixel data buffer to the kernel\n");
+		return;
+	}
+	printf("Pixel buffer associated with kernel\n");
 
+
+	// Define an index space (global work size) of work 
+	// items for execution. A workgroup size (local work size) 
+	// is not required, but can be used.
+	size_t globalWorkSize[] = { WINDOW_WIDTH, WINDOW_HEIGHT };
+	size_t localWorkSize[] = { 2, 2 };
+	
+	printf("Before. Pixels[0] is: r%f g%f b%f\n", pixels[0].red, pixels[0].green, pixels[0].blue);
+
+	// Executing kernel
+	status = clEnqueueNDRangeKernel(cmdQueue, kernel, 2, NULL,
+		globalWorkSize, NULL, 0, NULL, NULL);
+	if (status != CL_SUCCESS)
+	{
+		printf("Error while executing kernel\n");
+		return;
+	}
+	printf("Kernel executed\n");
+
+	// Read device output buffer to the host pixel array
+	clEnqueueReadBuffer(cmdQueue, pixel_data_buffer_out, CL_TRUE, 0,
+		SIZE, pixels, 0, NULL, NULL);
+
+	for (int i = 0; i < SIZE; i++) {
+		if (pixels[i].red != 0.0f)
+		printf("After. Pixels is: r%f g%f b%f\n", pixels[i].red, pixels[i].green, pixels[i].blue);
+	}
+	getchar();
 }
 
 // ## You may add your own destrcution routines here ##
 void destroy(){
-
-
+	// Free OpenCL resources
+	clReleaseKernel(kernel);
+	clReleaseProgram(program);
+	clReleaseCommandQueue(cmdQueue);
+	clReleaseMemObject(satelite_data_buffer);
+	clReleaseMemObject(pixel_data_buffer);
+	clReleaseContext(context);
 }
 
 
@@ -648,6 +696,10 @@ void errorCheck(){
          correctPixels[i].blue != pixels[i].blue){ 
 
          printf("Buggy pixel at (x=%i, y=%i). Press enter to continue.\n", i % WINDOW_WIDTH, i / WINDOW_WIDTH);
+		 printf("MyPixel/CorrectPixel are\n r:%f/%f g:%f/%f b:%f/%f \n", 
+			 pixels[i].red, correctPixels[i].red,
+			 pixels[i].green, correctPixels[i].green,
+			 pixels[i].blue, correctPixels[i].blue);
          getchar();
          return;
        }
