@@ -25,10 +25,11 @@ typedef struct{
 
 
 __kernel void graphicsEngine(__constant satelite *satelites, __global color *pixels) {
-	
-	int idx = get_global_id(0);
-	int idy = get_global_id(1);
 
+	int idx = get_global_id(0); // address of the thread
+	int idy = get_global_id(1); 
+	if (idx >= WINDOW_WIDTH || idy >= WINDOW_HEIGHT)
+		return;
 	// Row wise ordering
 	floatvector pixel = {.x = idx, .y = idy};
 
