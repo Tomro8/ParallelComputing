@@ -42,6 +42,10 @@ VERSION 19.0 - make all satelites affect the color with weighted average.
 // OpenCL includes
 #include "CL/cl.h"
 
+#ifdef __unix
+#define fopen_s(pFile,filename,mode) ((*(pFile))=fopen((filename),  (mode)))==NULL
+#endif
+
 // These are used to decide the window size
 #define WINDOW_HEIGHT 1024
 #define WINDOW_WIDTH  1024
@@ -108,8 +112,8 @@ satelite* backupSatelites;
 
 // ## You may add your own variables here ##
 
-#define WG_SIZE_X 16
-#define WG_SIZE_Y 16
+#define WG_SIZE_X 8
+#define WG_SIZE_Y 8
 
 #define MAX_SOURCE_SIZE (0x100000)
 
@@ -127,6 +131,7 @@ cl_mem pixel_data_buffer;
 cl_command_queue cmdQueue;
 // Program object
 cl_program program;
+
 
 // ## You may add your own initialization routines here ##
 void init(){
@@ -410,7 +415,10 @@ void parallelGraphicsEngine() {
 	// Define an index space (global work size) of work 
 	// items for execution. A workgroup size (local work size) 
 	// is not required, but can be used.
-	size_t globalWorkSize[] = { WINDOW_WIDTH, WINDOW_HEIGHT };
+   int global_size_x, global_size_y;
+   global_size_x = ceil((float)WINDOW_WIDTH / (float)WG_SIZE_X) * WG_SIZE_X;
+   global_size_y = ceil((float)WINDOW_WIDTH / (float)WG_SIZE_Y) * WG_SIZE_Y;
+	size_t globalWorkSize[] = {global_size_x, global_size_y};
 	size_t localWorkSize[] = { WG_SIZE_X, WG_SIZE_Y };
 
 	// Executing kernel
